@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  username String @unique
+  hash     String
+
+  email     String  @unique
+  avatar    String?
+  firstName String?
+  lastName  String?
+
+  chat         Chat[]
+  UserOne      Friend[]       @relation("userone")
+  UserTwo      Friend[]       @relation("usertwo")
+  Groups       UsersOnGroup[]
+  CreatorGroup Group[]
+  GroupMessage GroupMessage[]
+
+  @@map("users")
+}
+
+model Chat {
+  id        Int      @id @default(autoincrement())
+  msg       String
+  from      Int
+  to        Int
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  user      User     @relation(fields: [from], references: [id])
+
+  @@map("chats")
+}
+
+model Friend {
+  id        Int      @default(autoincrement())
+  userOneId Int
+  userTwoId Int
+  createAt  DateTime @default(now()) @db.Timestamp(6)
+
+  //STATUS
+  // 0 || NULL: DEFAULT - CANCEL - DELETE
+  // 1: PENDING
+  // 2: ACCEPT
+  status Int
+
+  UserOne User @relation("userone", fields: [userOneId], references: [id], map: "userone_fkey")
+  UserTwo User @relation("usertwo", fields: [userTwoId], references: [id], map: "usertwo_fkey")
+
+  @@id([userOneId, userTwoId])
+  @@map("friends")
+}
+
+model Group {
+  id              Int            @id @default(autoincrement())
+  creatorId       Int
+  creator         User           @relation(fields: [creatorId], references: [id])
+  title           String?
+  messages        GroupMessage[]
+  lastMessageSent String?
+  lastMessageAt   DateTime?      @updatedAt
+  avatar          String?
+  createAt        DateTime       @default(now()) @db.Timestamp(6)
+
+  Users UsersOnGroup[]
+}
+
+model UsersOnGroup {
+  group   Group @relation(fields: [groupId], references: [id])
+  groupId Int
+  user    User  @relation(fields: [userId], references: [id])
+  userId  Int
+
+  @@id([groupId, userId])
+}
+
+model GroupMessage {
+  id       Int      @id @default(autoincrement())
+  Group    Group?   @relation(fields: [groupId], references: [id])
+  groupId  Int?
+  from     Int
+  message  String
+  fromUser User?    @relation(fields: [from], references: [id])
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+}
